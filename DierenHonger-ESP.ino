@@ -1,13 +1,18 @@
 #include <Arduino.h>
 #include "WiFiConfig.h"
 #include "ButtonHandler.h"
-#include "LEDControl.h"
+#include "ServerCommunication.h" // Include your server communication header
+#include "HX711Handler.h"
 
 #define BUTTON_PIN 23
 #define LED_PIN 22
 
 unsigned long lastHttpRequest = 0;
 unsigned long httpInterval = 5000;  // Check LED state every 5 seconds
+unsigned long lastWeightRequest = 0;
+unsigned long weightInterval = 60000; // Send weight every 60 seconds
+
+HX711Handler scale(19, 18);
 
 void setup() {
     pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -15,6 +20,7 @@ void setup() {
     Serial.begin(115200);
     
     setupWiFi();
+    scale.begin();  
 }
 
 void loop() {
@@ -26,4 +32,16 @@ void loop() {
 
     // Handle button press
     handleButtonPress();
+
+    // Read and print weight from the scale
+    if (scale.isReady()) {
+        float weight = scale.readWeight();
+        Serial.println(weight);
+
+        // Send weight data to the Raspberry Pi every 60 seconds
+        if (millis() - lastWeightRequest >= weightInterval) {
+            sendWeightToServer(weight);
+            lastWeightRequest = millis();
+        }
+    }
 }
