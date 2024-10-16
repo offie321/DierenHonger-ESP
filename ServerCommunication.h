@@ -5,5 +5,8 @@
 #include <WiFi.h>
 
 void sendWeightToServer(float weight);
+void fetchFeedingTimes(); // Declaration to fetch feeding times
+String* getFeedingTimes(); // Declaration to get feeding times
+int getNumFeedingTimes(); // Declaration to get the number of feeding times
 
 #endif
