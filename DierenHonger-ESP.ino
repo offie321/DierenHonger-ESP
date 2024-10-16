@@ -3,6 +3,7 @@
 #include "ButtonHandler.h"
 #include "ServerCommunication.h" // Include your server communication header
 #include "HX711Handler.h"
+#include "StepperMotorHandler.h"
 
 #define BUTTON_PIN 23
 #define LED_PIN 22
@@ -20,7 +21,8 @@ void setup() {
     Serial.begin(115200);
     
     setupWiFi();
-    scale.begin();  
+    scale.begin();
+    setupStepperMotor();  
 }
 
 void loop() {
@@ -32,6 +34,9 @@ void loop() {
 
     // Handle button press
     handleButtonPress();
+
+    // Handle stepper motor movement
+    handleStepperMotorMovement();
 
     // Read and print weight from the scale
     if (scale.isReady()) {
