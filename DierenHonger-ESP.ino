@@ -13,7 +13,7 @@
 
 // Define necessary global variables
 WiFiUDP udp;
-NTPClient timeClient(udp, "pool.ntp.org", 0, 60000); // NTP client for getting the time
+NTPClient timeClient(udp, "pool.ntp.org", 3600, 60000); // NTP client for getting the time
 
 unsigned long lastHttpRequest = 0;
 unsigned long httpInterval = 5000;  // Check LED state every 5 seconds
