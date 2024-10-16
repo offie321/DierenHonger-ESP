@@ -4,6 +4,7 @@
 #include "ServerCommunication.h" // Include your server communication header
 #include "HX711Handler.h"
 #include "StepperMotorHandler.h"
+#include "LEDControl.h"
 
 #define BUTTON_PIN 23
 #define LED_PIN 22
