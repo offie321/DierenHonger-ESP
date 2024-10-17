@@ -6,19 +6,27 @@
 #include "StepperMotorHandler.h"
 #include "LEDControl.h"
 
+#include <HTTPClient.h>          // Include HTTPClient
+#include <ArduinoJson.h>        // Include ArduinoJson for JSON handling
+
 #define BUTTON_PIN 23
 #define LED_PIN 22
 
+// Global variables
 unsigned long lastHttpRequest = 0;
 unsigned long httpInterval = 5000;  // Check LED state every 5 seconds
 unsigned long lastWeightRequest = 0;
 unsigned long weightInterval = 60000; // Send weight every 60 seconds
-
+unsigned long lastFeedingCheck = 0; // Declare lastFeedingCheck
+unsigned long feedingCheckInterval = 60000; // Declare feedingCheckInterval (e.g., 60 seconds)
 HX711Handler scale(19, 18);
+
+// State variables
+bool feedingTriggered = false; // State variable to track if feeding has been triggered
+String feedingTimes[3]; // Declare an array for feeding times (adjust size as needed)
 
 String getCurrentTime() {
     // Simulate current time as "HH:MM:SS"
-    // You can adjust this to simulate different times
     return "14:30:00"; // Example: 2:30 PM
 }
 
@@ -39,26 +47,27 @@ void loop() {
         lastHttpRequest = millis();
     }
 
-    // // Handle button press
-    // handleButtonPress();
-
-    // // Handle stepper motor movement
-    // handleStepperMotorMovement();
-
     // Fetch feeding times every minute
     if (millis() - lastFeedingCheck >= feedingCheckInterval) {
         fetchFeedingTimes();
         lastFeedingCheck = millis();
+        feedingTriggered = false; // Reset when new feeding times are fetched
     }
 
+    // Get the current time as a string
+    String currentTime = getCurrentTime(); 
+
     // Check feeding times against current time
-    for (int i = 0; i < sizeof(feedingTimes)/sizeof(feedingTimes[0]); i++) {
-        if (currentTime.startsWith(feedingTimes[i])) { // Check if current time matches any feeding time
+    for (int i = 0; i < sizeof(feedingTimes) / sizeof(feedingTimes[0]); i++) {
+        if (currentTime == feedingTimes[i] && !feedingTriggered) {  // Use state variable here
             Serial.println("Feeding time matched: " + feedingTimes[i]);
-            // Trigger stepper motor for a few seconds
-            handleStepperMotorMovement(); // Adjust this to your specific logic for running the motor
-            delay(5000); // Run motor for 5 seconds (adjust as needed)
+            handleStepperMotorMovement(); 
+            delay(5000); // Run motor for 5 seconds
+            feedingTriggered = true; // Set state variable to true to prevent re-triggering
             break; // Exit loop after matching feeding time
+        } else if (currentTime.startsWith(feedingTimes[i]) && feedingTriggered) {
+            // Do nothing if feeding has already been triggered for this time
+            break; 
         }
     }
 
@@ -75,15 +84,15 @@ void loop() {
     }
 }
 
+
 void fetchFeedingTimes() {
     if (wifiMulti.run() == WL_CONNECTED) {
         HTTPClient http;
-        http.begin("http://rpi-offie.local:8000/feeding-times/times");
+        http.begin("http://rpi-offie.local:8000/feed-schedule/times");
         int httpCode = http.GET();
         if (httpCode > 0 && httpCode == HTTP_CODE_OK) {
             String payload = http.getString();
- // Example: Assume the response is a JSON array of strings
-            // Parse the JSON and store in feedingTimes array (assuming up to 3 times)
+            // Example: Assume the response is a JSON array of strings
             DynamicJsonDocument doc(1024); // Adjust size as necessary
             deserializeJson(doc, payload);
             for (int i = 0; i < doc.size() && i < 3; i++) {
