@@ -30,14 +30,15 @@ String getCurrentTime() {
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
         Serial.println("Failed to obtain time");
-        return "00:00:00"; // Return default time if NTP fails
+        return "00:00"; // Return default time if NTP fails
     }
 
-    // Format time as HH:MM:SS
-    char timeString[9];
-    strftime(timeString, sizeof(timeString), "%H:%M:%S", &timeinfo);
+    // Format time as HH:MM
+    char timeString[6];
+    strftime(timeString, sizeof(timeString), "%H:%M", &timeinfo);
     return String(timeString);
 }
+
 
 void setup() {
     pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -80,19 +81,23 @@ void loop() {
         feedingTriggered = false; // Reset when new feeding times are fetched
     }
 
-    // Check feeding times against current time
-    for (int i = 0; i < sizeof(feedingTimes) / sizeof(feedingTimes[0]); i++) {
-        if (currentTime == feedingTimes[i] && !feedingTriggered) {  // Use state variable here
-            Serial.println("Feeding time matched: " + feedingTimes[i]);
-            handleStepperMotorMovement(); 
-            delay(5000); // Run motor for 5 seconds
-            feedingTriggered = true; // Set state variable to true to prevent re-triggering
-            break; // Exit loop after matching feeding time
-        } else if (currentTime.startsWith(feedingTimes[i]) && feedingTriggered) {
-            // Do nothing if feeding has already been triggered for this time
-            break; 
-        }
+// Check feeding times against current time (only compare HH:MM)
+for (int i = 0; i < sizeof(feedingTimes) / sizeof(feedingTimes[0]); i++) {
+    // Ensure the current time is an exact match and that feeding hasn't been triggered for this time
+    if (currentTime == feedingTimes[i] && !feedingTriggered) {
+        Serial.println("Feeding time matched: " + feedingTimes[i]);
+        handleStepperMotorMovement(); 
+        delay(5000); // Run motor for 5 seconds
+        feedingTriggered = true; // Set state variable to true to prevent re-triggering
+        lastFeedingCheck = millis(); // Set this to the current time so the motor doesn't re-trigger in the same minute
+        break; // Exit loop after matching feeding time
     }
+}
+
+// After feeding has been triggered, reset the state for the next minute
+if (millis() - lastFeedingCheck >= 60000) {  // 60 seconds later
+    feedingTriggered = false;  // Reset to allow triggering for future feeding times
+}
 
     // Read and print weight from the scale
     if (scale.isReady()) {
@@ -120,7 +125,9 @@ void fetchFeedingTimes() {
             DynamicJsonDocument doc(1024); // Adjust size as necessary
             deserializeJson(doc, payload);
             for (int i = 0; i < doc.size() && i < 3; i++) {
-                feedingTimes[i] = doc[i].as<String>();
+                // Assuming feeding times are returned in "HH:MM:SS"
+                String fullFeedingTime = doc[i].as<String>();
+                feedingTimes[i] = fullFeedingTime.substring(0, 5); // Extract HH:MM
                 Serial.println("Feeding time: " + feedingTimes[i]);
             }
         } else {
@@ -129,3 +136,4 @@ void fetchFeedingTimes() {
         http.end();
     }
 }
+
