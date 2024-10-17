@@ -7,7 +7,8 @@
 #include "LEDControl.h"
 
 #include <HTTPClient.h>          // Include HTTPClient
-#include <ArduinoJson.h>        // Include ArduinoJson for JSON handling
+#include <ArduinoJson.h>         // Include ArduinoJson for JSON handling
+#include <time.h>                // Include time.h for NTP time synchronization
 
 #define BUTTON_PIN 23
 #define LED_PIN 22
@@ -26,8 +27,16 @@ bool feedingTriggered = false; // State variable to track if feeding has been tr
 String feedingTimes[3]; // Declare an array for feeding times (adjust size as needed)
 
 String getCurrentTime() {
-    // Simulate current time as "HH:MM:SS"
-    return "14:30:00"; // Example: 2:30 PM
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Failed to obtain time");
+        return "00:00:00"; // Return default time if NTP fails
+    }
+
+    // Format time as HH:MM:SS
+    char timeString[9];
+    strftime(timeString, sizeof(timeString), "%H:%M:%S", &timeinfo);
+    return String(timeString);
 }
 
 void setup() {
@@ -38,9 +47,23 @@ void setup() {
     setupWiFi();
     scale.begin();
     setupStepperMotor();  
+
+    // Configure NTP for time synchronization
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // NTP servers
+
+    // Wait for time to be synchronized
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Failed to obtain time");
+        return;
+    }
 }
 
 void loop() {
+    // Print the current time to the Serial Monitor every second
+    String currentTime = getCurrentTime(); 
+    Serial.println("Current Time: " + currentTime); // Added line to print current time
+
     // Check LED state every 5 seconds
     if (millis() - lastHttpRequest >= httpInterval) {
         get_remote_led_state();
@@ -53,9 +76,6 @@ void loop() {
         lastFeedingCheck = millis();
         feedingTriggered = false; // Reset when new feeding times are fetched
     }
-
-    // Get the current time as a string
-    String currentTime = getCurrentTime(); 
 
     // Check feeding times against current time
     for (int i = 0; i < sizeof(feedingTimes) / sizeof(feedingTimes[0]); i++) {
@@ -82,8 +102,9 @@ void loop() {
             lastWeightRequest = millis();
         }
     }
-}
 
+    delay(1000); // Delay for 1 second to print time once per second
+}
 
 void fetchFeedingTimes() {
     if (wifiMulti.run() == WL_CONNECTED) {
