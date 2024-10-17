@@ -49,7 +49,10 @@ void setup() {
     setupStepperMotor();  
 
     // Configure NTP for time synchronization
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov"); // NTP servers
+    int gmtOffset_sec = 2 * 3600;  // Offset for your timezone (UTC +2)
+    int daylightOffset_sec = 0;    // Set to 3600 if daylight saving is active, otherwise 0
+
+    configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org", "time.nist.gov"); // NTP servers
 
     // Wait for time to be synchronized
     struct tm timeinfo;
