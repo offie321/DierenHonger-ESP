@@ -17,7 +17,7 @@
 unsigned long lastHttpRequest = 0;
 unsigned long httpInterval = 5000;  // Check LED state every 5 seconds
 unsigned long lastWeightRequest = 0;
-unsigned long weightInterval = 60000; // Send weight every 60 seconds
+unsigned long weightInterval = 10000; // Send weight every 60 seconds
 unsigned long lastFeedingCheck = 0; // Declare lastFeedingCheck
 unsigned long feedingCheckInterval = 60000; // Declare feedingCheckInterval (e.g., 60 seconds)
 HX711Handler scale(19, 18);
@@ -110,6 +110,8 @@ if (millis() - lastFeedingCheck >= 60000) {  // 60 seconds later
             lastWeightRequest = millis();
         }
     }
+
+    handleButtonPress();
 
     delay(1000); // Delay for 1 second to print time once per second
 }
