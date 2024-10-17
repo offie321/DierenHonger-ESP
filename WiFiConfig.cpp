@@ -3,5 +3,5 @@
 WiFiMulti wifiMulti;
 
 void setupWiFi() {
-    wifiMulti.addAP("OFFIE", "Jemoeder"); // Add your WiFi credentials
+    wifiMulti.addAP("", ""); // Add your WiFi credentials ("wifihost", "password")
 }
